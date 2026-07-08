@@ -217,4 +217,4 @@ crm-ongs/
 
 ## Licenca
 
-Projeto academico - Trabalho de Faculdade
+Projeto academico - Trabalho de Faculdade - Jose Ailton
