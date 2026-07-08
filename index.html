@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0d6b5e">
+<title>Conexao Social CRM - Gestao para Impacto Social</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-container">
+    <div class="login-logo">
+      <div class="login-logo-icon">&#x2764;</div>
+      <h1>Conexao Social</h1>
+      <p>CRM para Impacto Social v1.0</p>
+    </div>
+    <input type="email" id="login-email" class="login-input" placeholder="E-mail" value="admin@conexaosocial.org">
+    <input type="password" id="login-senha" class="login-input" placeholder="Senha" onkeydown="if(event.key==='Enter')app.fazerLogin()">
+    <button class="login-btn" onclick="app.fazerLogin()">Entrar</button>
+    <div id="login-error" class="login-error"></div>
+    <button class="login-btn" style="margin-top:12px;background:var(--secondary);color:var(--primary)" onclick="app.modoOffline()">Modo Offline</button>
+    <button class="login-btn" style="margin-top:8px;background:rgba(255,255,255,0.1);color:#fff;border:2px dashed rgba(255,255,255,0.4)" onclick="app.showConfig()">&#x2699; Configurar Chaves</button>
+  </div>
+</div>
+
+<div id="modal-config" class="modal-overlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">Configurar Chaves</div>
+      <button class="modal-close" onclick="ui.fecharModal('modal-config')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Supabase URL</label>
+          <input class="form-input" id="cfg-supa-url" placeholder="https://xyz.supabase.co">
+        </div>
+        <div class="form-group full">
+          <label class="form-label">Supabase Anon Key</label>
+          <input class="form-input" type="password" id="cfg-supa-key" placeholder="eyJhbGci...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="ui.fecharModal('modal-config')">Cancelar</button>
+      <button class="btn btn-primary" onclick="app.salvarConfig()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div id="sidebar-overlay" class="overlay" onclick="app.toggleSidebar()"></div>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div>
+        <h2>Conexao Social</h2>
+        <p>v1.0</p>
+      </div>
+      <button class="dark-toggle" onclick="app.toggleDark()" title="Modo escuro">&#x1F319;</button>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-item" data-page="dashboard" onclick="app.navigate('dashboard')"><i>&#x1F4CA;</i>Dashboard</div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="familias" onclick="app.navigate('familias')"><i>&#x1F46A;</i>Familias<span class="nav-badge" id="badge-familias" style="display:none">0</span></div>
+      <div class="nav-item" data-page="doacoes" onclick="app.navigate('doacoes')"><i>&#x1F48E;</i>Doacoes<span class="nav-badge" id="badge-doacoes" style="display:none">0</span></div>
+      <div class="nav-item" data-page="campanhas" onclick="app.navigate('campanhas')"><i>&#x1F3AA;</i>Campanhas</div>
+      <div class="nav-item" data-page="voluntarios" onclick="app.navigate('voluntarios')"><i>&#x1F465;</i>Voluntarios<span class="nav-badge" id="badge-voluntarios" style="display:none">0</span></div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="captacao" onclick="app.navigate('captacao')"><i>&#x1F4B0;</i>Captacao de Recursos</div>
+      <div class="nav-item" data-page="financeiro" onclick="app.navigate('financeiro')"><i>&#x1F4B5;</i>Financeiro</div>
+      <div class="nav-item" data-page="agenda" onclick="app.navigate('agenda')"><i>&#x1F4C5;</i>Agenda<span class="nav-badge" id="badge-agenda" style="display:none">0</span></div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="ocorrencias" onclick="app.navigate('ocorrencias')"><i>&#x26A0;</i>Ocorrencias</div>
+      <div class="nav-item" data-page="relatorios" onclick="app.navigate('relatorios')"><i>&#x1F4C8;</i>Relatorios</div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-page="sync" onclick="app.navigate('sync')"><i>&#x2601;</i>Sincronizacao</div>
+      <div class="nav-item" onclick="app.fazerLogout()"><i>&#x1F6AA;</i>Sair</div>
+    </div>
+    <div class="sidebar-footer">IndexedDB + Supabase</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="app.toggleSidebar()">&#9776;</button>
+        <div class="page-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <button class="quick-search-btn" onclick="app.openQuickSearch()">&#x1F50D; Buscar... <kbd>Ctrl+K</kbd></button>
+        <div class="date-badge" id="date-badge"></div>
+        <div class="status-badge" onclick="app.sincronizar()">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">...</span>
+        </div>
+        <button class="sync-btn" onclick="app.sincronizar()">&#x1F504; Sync</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<div id="gemini-fab" onclick="app.toggleGemini()">IA</div>
+<div id="gemini-bar" class="gemini-closed">
+  <div class="gemini-header">
+    <span>&#x1F916; Assistente IA</span>
+    <button onclick="app.toggleGemini()">&times;</button>
+  </div>
+  <div class="gemini-body">
+    <div id="gemini-status" class="gemini-status"></div>
+    <div id="gemini-history"></div>
+  </div>
+  <div class="gemini-input-row">
+    <button id="gemini-mic" onclick="app.geminiStartVoice()" title="Comando de voz">&#x1F3A4;</button>
+    <input type="text" id="gemini-input" placeholder='Ex: "localiza familia Silva"' onkeydown="if(event.key==='Enter')app.geminiCommand()">
+    <button id="gemini-send" onclick="app.geminiCommand()">Enviar</button>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<div id="confirm-overlay" class="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title" id="confirm-title">Confirmar</div>
+    <div class="confirm-msg" id="confirm-msg"></div>
+    <div class="confirm-buttons">
+      <button class="btn btn-outline btn-sm" onclick="ui.closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="confirm-yes">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div id="quick-search-overlay" onclick="if(event.target===this)app.closeQuickSearch()">
+  <div id="quick-search-box">
+    <input type="text" id="quick-search-input" style="width:100%;border:none;font-size:18px;padding:20px;border-bottom:1px solid var(--border);background:var(--card);color:var(--text)" placeholder="Buscar familias, doacoes, voluntarios..." oninput="app.doQuickSearch(this.value)">
+    <div id="quick-search-results" style="max-height:400px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<div id="modal-visita360" class="modal-overlay">
+  <div class="modal" style="max-width:800px">
+    <div class="modal-header">
+      <div class="modal-title" id="v360-title">Visao 360</div>
+      <button class="modal-close" onclick="ui.fecharModal('modal-visita360')">&times;</button>
+    </div>
+    <div class="modal-body" id="v360-body"></div>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app-core.js"></script>
+<script src="js/app-nav.js"></script>
+<script src="js/crud-engine.js"></script>
+<script src="js/pages-crud1.js"></script>
+<script src="js/pages-crud2.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  db.init().then(function() {
+    app.loadDark();
+    app.setupKeyboard();
+    if (typeof supabase !== 'undefined') {
+      var u = localStorage.getItem('supa_url') || CONFIG.SUPABASE_URL;
+      var k = localStorage.getItem('supa_key') || CONFIG.SUPABASE_ANON_KEY;
+      if (u && k) window.supabaseClient = supabase.createClient(u, k);
+    }
+  }).catch(function(e) {
+    console.error('DB init error:', e);
+  });
+});
+</script>
+</body>
+</html>
